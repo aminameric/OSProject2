@@ -1,0 +1,44 @@
+// First we initialize the variables and locks
+max_requests = N                                // Set the maximum number of requests that are allowed in the system
+current_requests = 0                            // Number of current requests in the system set to 0
+service_lock = Lock()                           // Lock object for protecting the critical section, making sure only one thread can modify "current_requests" variable
+service_condition = Condition(service_lock)     // Condition variable for thread synchronization, making thread wait unitl the condition is satisfied
+
+
+// Function to be run by request threads
+fun handle_request():
+
+
+    service_lock.acquire()                      //Set the lock to enter the critical section, calling thread will be blocked unitl the lock becomes available
+    if current_requests >= max_requests:        //Check if the number of current requests is exceeding the max number of requests system can hadle
+        service_lock.release()                  //Service lock realised to make sure the lock in not unnecessarily held when the thread exits
+        thread_exitFailure()                    //Terminate the thread with an error value becouse the system is overloaded
+   
+    current_requests += 1                        //Increase the number of current requests to mark a new request has entered the system
+
+
+    service_lock.release()                      //After incrementing, release the lock to allow other threads/requests to proceed,to access the shared resource or critical section
+
+
+    service_condition.acquire()                  //Wait until it's the thread's turn to receive service
+
+
+    service_lock.acquire()                      //Set the lock again
+    while current_requests > 1:
+        service_condition.wait()               //Wait unitl it is threades turn to recive service
+    service_lock.release()                     //Waiting operation realises the lock and allows other threads to proceed
+
+
+    receiveService()                           // Perform the service of a request
+
+
+   
+    service_lock.acquire()                    //Acquire the lock again,acquiring the lock thread makes sure that it has exclusive control over the shared resource.
+    current_requests -= 1                    //Decrement the number of current requests,request has been served and is no longer active
+    service_condition.notify()               //Condition thread has been waiting for has been satisfied, notifying one waiting thread that it can seek service
+    service_lock.release()                   //Release the lock, let thread proceed
+
+
+    thread_exitSuccess()                     //Successful termination of the thread, request has been processed and the thread can exit successfully.
+
+
